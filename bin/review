@@ -1,0 +1,45 @@
+#!/usr/bin/env bash
+# review [project-dir]  Start the review board if it isn't running and print the project's URL.
+# review flags [project-dir]  Print the user's flags and comments from review.json.
+# review stop  Stop the board.
+set -euo pipefail
+
+APP="$(cd "$(dirname "$(readlink -f "$0")")/.." && pwd)"
+PORT="${REVIEW_PORT:-4747}"
+BASE="http://localhost:$PORT"
+LOG="${XDG_STATE_HOME:-$HOME/.local/state}/review-board.log"
+PIDFILE="${XDG_STATE_HOME:-$HOME/.local/state}/review-board.pid"
+
+running() { curl -sf "$BASE/api/health" 2>/dev/null | grep -q review-board; }
+
+cmd="${1:-}"
+case "$cmd" in
+  stop)
+    if [ -f "$PIDFILE" ] && kill "$(cat "$PIDFILE")" 2>/dev/null; then echo "stopped"; else echo "not running"; fi
+    rm -f "$PIDFILE"
+    exit 0 ;;
+  flags)
+    shift
+    exec bun "$APP/scripts/flags.ts" "$(realpath "${1:-.}")" ;;
+  -h|--help)
+    sed -n '2,4p' "$0" | sed 's/^# //'
+    exit 0 ;;
+esac
+
+project="$(realpath "${1:-.}")"
+
+if ! running; then
+  cd "$APP"
+  [ -d node_modules ] || bun install --silent
+  # Rebuild when the source is newer than the last build.
+  if [ ! -f .next/BUILD_ID ] || [ -n "$(find app components lib package.json -newer .next/BUILD_ID -print -quit)" ]; then
+    bun run build >"$LOG" 2>&1 || { echo "build failed, see $LOG" >&2; exit 1; }
+  fi
+  mkdir -p "$(dirname "$LOG")"
+  setsid nohup bun run start -p "$PORT" >>"$LOG" 2>&1 < /dev/null &
+  echo $! >"$PIDFILE"
+  for _ in $(seq 60); do running && break; sleep 0.5; done
+  running || { echo "review board didn't start, see $LOG" >&2; exit 1; }
+fi
+
+echo "$BASE/?project=$(python3 -c 'import sys, urllib.parse; print(urllib.parse.quote(sys.argv[1]))' "$project")"
