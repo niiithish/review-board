@@ -39,6 +39,7 @@ export function Viewer({
   review,
   versions,
   position,
+  neighbours,
   onSelect,
   onStep,
   onClose,
@@ -53,6 +54,7 @@ export function Viewer({
   review?: Review
   versions: Item[]
   position: string
+  neighbours: Item[]
   onSelect: (path: string) => void
   onStep: (delta: 1 | -1) => void
   onClose: () => void
@@ -211,30 +213,52 @@ export function Viewer({
           ) : (
             // eslint-disable-next-line @next/next/no-img-element
             <img
-              key={src}
               src={src}
               alt={item.name}
               className="max-h-full max-w-full object-contain"
             />
           )}
-          <Button
-            variant="secondary"
-            size="icon"
-            className="absolute top-1/2 left-3 -translate-y-1/2 opacity-70 hover:opacity-100"
-            onClick={() => onStep(-1)}
-            title="Previous (←)"
-          >
-            <IconChevronLeft />
-          </Button>
-          <Button
-            variant="secondary"
-            size="icon"
-            className="absolute top-1/2 right-3 -translate-y-1/2 opacity-70 hover:opacity-100"
-            onClick={() => onStep(1)}
-            title="Next (→)"
-          >
-            <IconChevronRight />
-          </Button>
+          {neighbours.map((n) =>
+            n.kind === "video" ? (
+              <video
+                key={n.path}
+                src={fileUrl(project, n.path, n.mtime)}
+                preload="auto"
+                muted
+                hidden
+              />
+            ) : (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                key={n.path}
+                src={fileUrl(project, n.path, n.mtime)}
+                alt=""
+                hidden
+              />
+            )
+          )}
+          <div className="absolute inset-y-0 left-3 flex items-center">
+            <Button
+              variant="secondary"
+              size="icon"
+              className="opacity-70 transition-none hover:opacity-100 active:translate-y-0"
+              onClick={() => onStep(-1)}
+              title="Previous (←)"
+            >
+              <IconChevronLeft />
+            </Button>
+          </div>
+          <div className="absolute inset-y-0 right-3 flex items-center">
+            <Button
+              variant="secondary"
+              size="icon"
+              className="opacity-70 transition-none hover:opacity-100 active:translate-y-0"
+              onClick={() => onStep(1)}
+              title="Next (→)"
+            >
+              <IconChevronRight />
+            </Button>
+          </div>
         </div>
 
         <aside className="no-scrollbar flex max-h-[45svh] w-full flex-col gap-4 overflow-y-auto border-t p-4 md:max-h-none md:w-96 md:shrink-0 md:border-t-0 md:border-l">
@@ -354,8 +378,8 @@ export function Viewer({
             )}
             <p className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
               <IconPhotoPlus className="size-3.5" />
-              Paste an image or its path (<Kbd>Ctrl</Kbd> <Kbd>V</Kbd>), or
-              drop one here
+              Paste an image or its path (<Kbd>Ctrl</Kbd> <Kbd>V</Kbd>), or drop
+              one here
             </p>
           </div>
 

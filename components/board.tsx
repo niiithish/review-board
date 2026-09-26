@@ -331,6 +331,14 @@ export function Board({ project }: { project: string }) {
               ? "not in this view"
               : `${openIndex + 1} of ${visible.length}`
           }
+          neighbours={
+            openIndex === -1 || visible.length < 2
+              ? []
+              : [1, -1].map(
+                  (d) =>
+                    visible[(openIndex + d + visible.length) % visible.length]
+                )
+          }
           onSelect={setOpen}
           onStep={step}
           onClose={() => setOpen(null)}
