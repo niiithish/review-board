@@ -23,6 +23,8 @@ import {
 import { Kbd } from "@/components/ui/kbd"
 import { Textarea } from "@/components/ui/textarea"
 
+const IMAGE_PATH = /^(file:\/\/|~\/|\/)\S.*\.(png|jpe?g|webp|gif)$/i
+
 function isTyping(target: EventTarget | null) {
   return (
     target instanceof HTMLElement &&
@@ -43,6 +45,7 @@ export function Viewer({
   onStatus,
   onComment,
   onAttach,
+  onAttachPath,
   onDetach,
 }: {
   project: string
@@ -56,6 +59,7 @@ export function Viewer({
   onStatus: (status: Status | null) => void
   onComment: (path: string, comment: string) => void
   onAttach: (image: Blob) => void
+  onAttachPath: (source: string) => void
   onDetach: (attachment: string) => void
 }) {
   const status = review?.status
@@ -113,19 +117,37 @@ export function Viewer({
     }
   }, [project, item.prompt])
 
-  // Paste an image from the clipboard anywhere in the viewer to attach it.
+  // Paste anywhere in the viewer: image data attaches as is, and a pasted
+  // image path or file:// link (a file copied in a file manager) attaches that
+  // file. Any other text pastes into the comment as usual.
   React.useEffect(() => {
     function onPaste(e: ClipboardEvent) {
-      const images = [...(e.clipboardData?.files ?? [])].filter((f) =>
-        f.type.startsWith("image/")
-      )
-      if (!images.length) return
-      e.preventDefault()
-      images.forEach(onAttach)
+      const data = e.clipboardData
+      if (!data) return
+      const images = [...data.items]
+        .filter((i) => i.kind === "file" && i.type.startsWith("image/"))
+        .map((i) => i.getAsFile())
+        .filter((f): f is File => f !== null)
+      if (images.length) {
+        e.preventDefault()
+        images.forEach(onAttach)
+        return
+      }
+      const text = (
+        data.getData("text/uri-list") || data.getData("text/plain")
+      ).trim()
+      const lines = text
+        .split(/\r?\n/)
+        .map((l) => l.trim())
+        .filter((l) => l && !l.startsWith("#"))
+      if (lines.length && lines.every((l) => IMAGE_PATH.test(l))) {
+        e.preventDefault()
+        lines.forEach(onAttachPath)
+      }
     }
     window.addEventListener("paste", onPaste)
     return () => window.removeEventListener("paste", onPaste)
-  }, [onAttach])
+  }, [onAttach, onAttachPath])
   const [dragging, setDragging] = React.useState(false)
   const attachments = review?.attachments ?? []
 
@@ -332,8 +354,8 @@ export function Viewer({
             )}
             <p className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
               <IconPhotoPlus className="size-3.5" />
-              Paste an image (<Kbd>Ctrl</Kbd> <Kbd>V</Kbd>) or drop one here to
-              attach it
+              Paste an image or its path (<Kbd>Ctrl</Kbd> <Kbd>V</Kbd>), or
+              drop one here
             </p>
           </div>
 

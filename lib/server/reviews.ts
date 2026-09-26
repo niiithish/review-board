@@ -84,7 +84,7 @@ export async function saveAttachment(project: string, file: string, blob: Blob) 
   const ext = IMAGE_TYPES[blob.type]
   if (!ext) throw new Error(`not an image: ${blob.type || "unknown type"}`)
   const stem = path.basename(file, path.extname(file)).replace(/[^\w.-]+/g, "_")
-  const rel = `${ATTACH_DIR}/${stem}-${Date.now()}${ext}`
+  const rel = `${ATTACH_DIR}/${stem}-${Date.now()}-${crypto.randomUUID().slice(0, 4)}${ext}`
   await mkdir(path.join(project, ATTACH_DIR), { recursive: true })
   await writeFile(path.join(project, rel), Buffer.from(await blob.arrayBuffer()))
   return rel
