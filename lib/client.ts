@@ -31,10 +31,12 @@ export function agentSummary(projectPath: string, items: Item[], reviews: Record
   const rows = Object.entries(reviews)
     .filter(([path]) => known.has(path))
     .sort(([a], [b]) => natural.compare(a, b))
-  const line = ([path, r]: [string, Review]) => `- ${path}${r.comment ? `: ${r.comment}` : ""}`
+  const line = ([path, r]: [string, Review]) =>
+    `- ${path}${r.comment ? `: ${r.comment}` : ""}` +
+    (r.attachments?.length ? ` (attached: ${r.attachments.join(", ")})` : "")
   const flagged = rows.filter(([, r]) => r.status === "flagged")
   const approved = rows.filter(([, r]) => r.status === "approved")
-  const notes = rows.filter(([, r]) => !r.status && r.comment)
+  const notes = rows.filter(([, r]) => !r.status && (r.comment || r.attachments?.length))
   const parts = [
     `I reviewed ${projectPath} in review-board (full state in review.json there): ${flagged.length} flagged, ${approved.length} approved.`,
   ]

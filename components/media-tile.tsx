@@ -1,6 +1,6 @@
 "use client"
 
-import { IconCheck, IconFlagFilled, IconMessage, IconPlayerPlayFilled } from "@tabler/icons-react"
+import { IconCheck, IconFlagFilled, IconMessage, IconPaperclip, IconPlayerPlayFilled } from "@tabler/icons-react"
 
 import { cn } from "@/lib/utils"
 import { fileUrl } from "@/lib/client"
@@ -60,6 +60,11 @@ export function MediaTile({
           <img src={src} alt={item.name} loading="lazy" className="size-full object-contain" />
         )}
         <div className="pointer-events-none absolute top-2 right-2 flex gap-1">
+          {review?.attachments?.length ? (
+            <span className="rounded-md bg-black/70 p-1 text-white">
+              <IconPaperclip className="size-3.5" />
+            </span>
+          ) : null}
           {review?.comment && (
             <span className="rounded-md bg-black/70 p-1 text-white">
               <IconMessage className="size-3.5" />

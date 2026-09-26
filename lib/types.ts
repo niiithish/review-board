@@ -3,6 +3,8 @@ export type Status = "flagged" | "approved"
 export type Review = {
   status?: Status
   comment?: string
+  /** Images the user pasted, relative to the project (in .review/attachments/). */
+  attachments?: string[]
   at: string
 }
 

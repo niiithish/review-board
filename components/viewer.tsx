@@ -6,6 +6,7 @@ import {
   IconChevronLeft,
   IconChevronRight,
   IconFlagFilled,
+  IconPhotoPlus,
   IconX,
 } from "@tabler/icons-react"
 
@@ -34,6 +35,8 @@ export function Viewer({
   onClose,
   onStatus,
   onComment,
+  onAttach,
+  onDetach,
 }: {
   project: string
   item: Item
@@ -45,6 +48,8 @@ export function Viewer({
   onClose: () => void
   onStatus: (status: Status | null) => void
   onComment: (path: string, comment: string) => void
+  onAttach: (image: Blob) => void
+  onDetach: (attachment: string) => void
 }) {
   const status = review?.status
   const videoRef = React.useRef<HTMLVideoElement>(null)
@@ -98,6 +103,20 @@ export function Viewer({
     }
   }, [project, item.prompt])
 
+  // Paste an image from the clipboard anywhere in the viewer to attach it.
+  React.useEffect(() => {
+    function onPaste(e: ClipboardEvent) {
+      const images = [...(e.clipboardData?.files ?? [])].filter((f) => f.type.startsWith("image/"))
+      if (!images.length) return
+      e.preventDefault()
+      images.forEach(onAttach)
+    }
+    window.addEventListener("paste", onPaste)
+    return () => window.removeEventListener("paste", onPaste)
+  }, [onAttach])
+  const [dragging, setDragging] = React.useState(false)
+  const attachments = review?.attachments ?? []
+
   React.useEffect(() => {
     function onKey(e: KeyboardEvent) {
       if (e.metaKey || e.ctrlKey || e.altKey) return
@@ -128,7 +147,7 @@ export function Viewer({
 
   return (
     <div className="fixed inset-0 z-50 flex flex-col bg-background md:flex-row">
-      <div className="relative flex min-h-0 flex-1 items-center justify-center bg-black">
+      <div className="relative flex min-h-0 min-w-0 flex-1 items-center justify-center bg-black">
         {item.kind === "video" ? (
           <video
             key={src}
@@ -164,7 +183,7 @@ export function Viewer({
         </Button>
       </div>
 
-      <aside className="flex max-h-[45svh] w-full flex-col gap-4 overflow-y-auto border-t p-4 md:max-h-none md:w-96 md:border-t-0 md:border-l">
+      <aside className="flex max-h-[45svh] w-full flex-col gap-4 overflow-y-auto border-t p-4 md:max-h-none md:w-96 md:shrink-0 md:border-t-0 md:border-l">
         <div className="flex items-start gap-2">
           <div className="min-w-0 flex-1">
             <p className="truncate font-medium">{item.name}</p>
@@ -210,6 +229,49 @@ export function Viewer({
           />
           <p className="text-[11px] text-muted-foreground">
             {draft.trim() === saved.trim() ? (saved ? "Saved" : "Saved as you type") : "Saving…"}
+          </p>
+        </div>
+
+        <div
+          className={cn(
+            "flex flex-col gap-2 rounded-lg border border-dashed p-2 transition-colors",
+            dragging && "border-primary bg-primary/10"
+          )}
+          onDragOver={(e) => {
+            e.preventDefault()
+            setDragging(true)
+          }}
+          onDragLeave={() => setDragging(false)}
+          onDrop={(e) => {
+            e.preventDefault()
+            setDragging(false)
+            ;[...e.dataTransfer.files].filter((f) => f.type.startsWith("image/")).forEach(onAttach)
+          }}
+        >
+          {attachments.length > 0 && (
+            <div className="grid grid-cols-3 gap-2">
+              {attachments.map((a) => (
+                <div key={a} className="group/att relative aspect-square overflow-hidden rounded-md bg-muted">
+                  <a href={fileUrl(project, a)} target="_blank" rel="noreferrer">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={fileUrl(project, a)} alt="attachment" className="size-full object-cover" />
+                  </a>
+                  <Button
+                    size="icon-xs"
+                    variant="secondary"
+                    className="absolute top-1 right-1 opacity-0 group-hover/att:opacity-100"
+                    onClick={() => onDetach(a)}
+                    title="Remove"
+                  >
+                    <IconX />
+                  </Button>
+                </div>
+              ))}
+            </div>
+          )}
+          <p className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
+            <IconPhotoPlus className="size-3.5" />
+            Paste an image (<Kbd>Ctrl</Kbd> <Kbd>V</Kbd>) or drop one here to attach it
           </p>
         </div>
 

@@ -94,6 +94,39 @@ export function Board({ project }: { project: string }) {
     [project, load]
   )
 
+  // Attachments go straight to the server; the reply carries the new reviews.
+  const sendAttachment = React.useCallback(
+    async (request: Promise<Response>) => {
+      try {
+        const res = await request
+        const body = await res.json()
+        if (!res.ok) throw new Error(body.error ?? res.statusText)
+        lastLocal.current = Date.now()
+        setReviews(body.reviews)
+      } catch (e) {
+        toast.error(`Not saved: ${e instanceof Error ? e.message : e}`)
+      }
+    },
+    []
+  )
+  const attach = React.useCallback(
+    (path: string, image: Blob) => {
+      const form = new FormData()
+      form.set("project", project)
+      form.set("path", path)
+      form.set("image", image)
+      void sendAttachment(fetch("/api/attach", { method: "POST", body: form }))
+    },
+    [project, sendAttachment]
+  )
+  const detach = React.useCallback(
+    (path: string, attachment: string) => {
+      const q = new URLSearchParams({ project, path, attachment })
+      void sendAttachment(fetch(`/api/attach?${q}`, { method: "DELETE" }))
+    },
+    [project, sendAttachment]
+  )
+
   const setStatus = React.useCallback(
     (path: string, status: Status | null) => void save(path, { status }),
     [save]
@@ -242,6 +275,8 @@ export function Board({ project }: { project: string }) {
           onClose={() => setOpen(null)}
           onStatus={(s) => setStatus(openItem.path, s)}
           onComment={setComment}
+          onAttach={(image) => attach(openItem.path, image)}
+          onDetach={(a) => detach(openItem.path, a)}
         />
       )}
     </div>

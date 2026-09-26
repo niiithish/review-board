@@ -13,7 +13,7 @@ It's only for reviewing. You don't chat with the agent here.
 This starts the board on port 4747 (building it first if needed) and prints the project's URL. Run it again any time; if the board is already running it only prints the URL. `http://localhost:4747` lists every project under `~/Work`.
 
 - **Grid:** each shot shows its newest version (turn off **Latest only** to see every file). The tabs filter by folder (characters, stills, clips…) and by review state. New files appear on their own within a few seconds.
-- **Viewer:** click a tile. `←` `→` move, `F` flag, `A` approve, `X` clear, `C` comment, `Space` play, `Esc` close. Comments save as you type. The panel also shows the shot's other versions and the prompt it was made from.
+- **Viewer:** click a tile. `←` `→` move, `F` flag, `A` approve, `X` clear, `C` comment, `Space` play, `Esc` close. Comments save as you type. Paste an image (`Ctrl+V`) or drop one on the panel to attach it. The panel also shows the shot's other versions and the prompt it was made from.
 - **Copy for agent:** copies a short summary (flagged with comments, notes, approved) to paste into the chat.
 
 ## For agents
@@ -29,13 +29,18 @@ This starts the board on port 4747 (building it first if needed) and prints the 
 ```json
 {
   "items": {
-    "clips/clip-8-v1.mp4": { "status": "flagged", "comment": "too dark", "at": "…" },
+    "clips/clip-8-v1.mp4": {
+      "status": "flagged",
+      "comment": "too dark, like this one",
+      "attachments": [".review/attachments/clip-8-v1-1790407558679.png"],
+      "at": "…"
+    },
     "clips/clip-9-v1.mp4": { "status": "approved", "at": "…" }
   }
 }
 ```
 
-`flagged` means redo it, and its comment says why. `approved` means keep it. A comment with no status is a note. Paths are relative to the project. Reviews stay on the file they were given to, so a new version (`-v2`) shows up unreviewed.
+`flagged` means redo it, and its comment says why. `approved` means keep it. A comment with no status is a note. `attachments` are images the user pasted, relative to the project: open them. `review flags` prints their full paths. Paths are relative to the project. Reviews stay on the file they were given to, so a new version (`-v2`) shows up unreviewed.
 
 ## Settings
 
