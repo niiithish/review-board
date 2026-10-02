@@ -21,6 +21,8 @@ const MEDIA_DIRS = [
   "final",
 ]
 const MAX_FILES = 5000
+/** Generated output lives here; anywhere else a file shows only if it has a prompt (made in this project). */
+const OUTPUT_DIRS = new Set(["scenes", "stills", "clips"])
 
 type Found = { rel: string; size: number; mtime: number }
 
@@ -82,7 +84,11 @@ export async function scanProject(project: string): Promise<Item[]> {
   const media: Found[] = []
   const prompts = new Set<string>()
   await walk(project, project, media, prompts)
-  return media.map(({ rel, size, mtime }) => {
+  // Pasted sheets, style refs, reference videos, frame grabs and contact sheets have no prompt: not ours to review.
+  const ours = media
+    .map((m) => ({ ...m, prompt: findPrompt(m.rel, prompts) }))
+    .filter((m) => m.prompt || OUTPUT_DIRS.has(m.rel.split("/")[0]))
+  return ours.map(({ rel, size, mtime, prompt }) => {
     const ext = path.posix.extname(rel).toLowerCase()
     const name = path.posix.basename(rel)
     const stem = name.slice(0, name.length - ext.length)
@@ -97,7 +103,7 @@ export async function scanProject(project: string): Promise<Item[]> {
       label: stem.startsWith("rejected-") ? `${label || "v?"} rejected` : label,
       size,
       mtime,
-      prompt: findPrompt(rel, prompts),
+      prompt,
     } satisfies Item
   })
 }
