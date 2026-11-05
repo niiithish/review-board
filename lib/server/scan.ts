@@ -85,7 +85,17 @@ export async function scanProject(project: string): Promise<Item[]> {
   const prompts = new Set<string>()
   await walk(project, project, media, prompts)
   // Pasted sheets, style refs, reference videos, frame grabs and contact sheets have no prompt: not ours to review.
+  // A clip with a 1080p upscale (`final/<stem>-1080p.mp4` or `<stem>-1080p.mp4` beside it) shows only as the 1080p, so it is reviewed once.
+  const all = new Set(media.map((m) => m.rel))
+  const hasUpscale = (rel: string) => {
+    const ext = path.posix.extname(rel)
+    const stem = path.posix.basename(rel, ext)
+    if (/-1080p$/i.test(stem)) return false
+    const dir = path.posix.dirname(rel)
+    return [path.posix.join(dir, "final", `${stem}-1080p${ext}`), path.posix.join(dir, `${stem}-1080p${ext}`)].some((p) => all.has(p))
+  }
   const ours = media
+    .filter((m) => !hasUpscale(m.rel))
     .map((m) => ({ ...m, prompt: findPrompt(m.rel, prompts) }))
     .filter((m) => m.prompt || OUTPUT_DIRS.has(m.rel.split("/")[0]))
   return ours.map(({ rel, size, mtime, prompt }) => {
@@ -99,7 +109,8 @@ export async function scanProject(project: string): Promise<Item[]> {
       name,
       kind: VIDEO.has(ext) ? "video" : "image",
       section: rel.includes("/") ? rel.split("/")[0] : ".",
-      group: `${dir}/${base}`,
+      // finals sit in `final/` but are versions of the same shot
+      group: `${dir.replace(/\/final$/, "")}/${base}`,
       label: stem.startsWith("rejected-") ? `${label || "v?"} rejected` : label,
       size,
       mtime,
